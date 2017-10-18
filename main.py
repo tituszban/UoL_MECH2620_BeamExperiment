@@ -4,11 +4,14 @@ from os.path import isfile, join
 import matplotlib.pyplot as plt
 
 path = 'Data/No_mass'
+#path = 'Data/Mass'
 
 data = []
 time_stamp = []
 
 TIME_RANGE = 400
+
+max_detection_window = 5
 
 files = [join(path, f) for f in listdir(path) if isfile(join(path, f))]
 
@@ -32,20 +35,35 @@ with open(files[0], 'r') as text:
 data = np.array(data)
 time_stamp = np.array(time_stamp)
 
-average = data.mean(0)[:TIME_RANGE]
+average = [ sum(data[:, i]) / data.shape[0] for i in range(data.shape[1])]
+average = np.array(average)[:TIME_RANGE]
+
 time_stamp = time_stamp[:TIME_RANGE]
 
-A = 0
-A_sweep_range = [8, 20]
-A_step = 0.1
 
-Tau = 0
-Tau_sweep_range = [0.1, 1]
-Tau_step = 0.05
+#for dat in data:
+    #plt.plot(time_stamp, dat[:TIME_RANGE])
 
-for dat in data:
-    plt.plot(time_stamp, dat[:TIME_RANGE])
+peaks = []
 
-plt.plot(time_stamp, average)
+for i in range(max_detection_window, len(average) - max_detection_window):
+    if average[i] == max(average[i - max_detection_window: i + max_detection_window]):
+        peaks.append((time_stamp[i], average[i]))
+
+
+plt.plot(time_stamp, average, color='r')
+
+for peak in peaks:
+    plt.plot(peak[0], peak[1], "*", color='b')
+
+dt = []
+
+for i in range(1, len(peaks)):
+    dt.append(peaks[i][0] - peaks[i - 1][0])
+
+dt = sum(dt) / len(dt)
+
+print(dt)
 
 plt.show()
+
