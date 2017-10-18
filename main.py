@@ -52,13 +52,21 @@ def calculate_error_offset(peaks_mx, peaks_mn):
 
     return -(sum(error_mn) / len(error_mn) - sum(error_mx) / len(error_mx)) / 2
 
+def square_error(data1, data2):
+    error = 0
+    if len(data1) != len(data2):
+        raise "Error"
+    for i, _ in enumerate(data1):
+        error += (data1[i] - data2[i]) ** 2
+    return error
+
 path = 'Data/No_mass'
 path = 'Data/Mass'
 
 data = []
 time_stamp = []
 
-TIME_RANGE = 500
+TIME_RANGE = 400
 
 max_detection_window = 5
 
@@ -122,10 +130,12 @@ print([peak[1] for peak in peaks_mn])
 
 sigma = []
 
-for i in range(1, len(peaks_mx) - 3):
+for i in range(1, len(peaks_mx)):
     sigma.append(1 / i * math.log(abs(peaks_mx[0][1] / peaks_mx[i][1])))
-for i in range(1, len(peaks_mn) - 3):
+for i in range(1, len(peaks_mn)):
     sigma.append(1 / i * math.log(abs(peaks_mn[0][1] / peaks_mn[i][1])))
+
+print(sigma)
 
 sigma = sum(sigma) / len(sigma)
 
@@ -139,10 +149,32 @@ print('omega_d:', omega_d)
 print('omega_n:', omega_n)
 print('zeta:', zeta)
 
-scaler = 9
-theta = 4.2
+SCALER_SWEEP_RANGE = (8, 12)
+SCALER_SWEEP_STEP = 0.05
 
-reference = [scaler * math.exp(-omega_n * zeta * v) * math.sin(omega_d * v + theta) for v in time_stamp]
+THETA_SWEEP_RANGE = (0, 6.28)
+THETA_SWEEP_STEP = 0.1
+
+min_error = 9999999999
+best_scaler = 0
+best_theta = 0
+
+for i in range(math.floor(THETA_SWEEP_RANGE[1] / THETA_SWEEP_STEP)):
+    for j in range(math.floor(SCALER_SWEEP_RANGE[1] / SCALER_SWEEP_STEP)):
+        scaler = SCALER_SWEEP_RANGE[0] + SCALER_SWEEP_STEP * j
+        theta = THETA_SWEEP_RANGE[0] + THETA_SWEEP_STEP * i
+
+        reference = [scaler * math.exp(-omega_n * zeta * v) * math.sin(omega_d * v + theta) for v in time_stamp]
+
+        error = square_error(average, reference)
+        if error < min_error:
+            min_error = error
+            best_scaler = scaler
+            best_theta = theta
+
+print(best_theta, best_scaler)
+
+reference = [best_scaler * math.exp(-omega_n * zeta * v) * math.sin(omega_d * v + best_theta) for v in time_stamp]
 
 plt.plot(time_stamp, reference)
 plt.plot(time_stamp, [0 for _ in time_stamp])
